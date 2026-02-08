@@ -7,3 +7,5 @@ class ResponseSignal(Enum):
     FILE_TYPE_NOT_SUPPORTED = "Invalid file type. Only .txt, .pdf, and .docx files are allowed."
     FILE_SIZE_EXCEEDED = "File size exceeds the maximum limit of 10 MB."
     FILE_UPLOAD_FAILED = "File upload failed due to an unexpected error."
+    PROCESSING_SUCCESS = "File processed successfully."
+    PROCESSING_FAILED = "File processing failed. Please check the file content and try again."
