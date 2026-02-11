@@ -12,6 +12,9 @@ from .schemes.data import ProcessRequest
 from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
 from models.db_schemes import DataChunk
+from models.AssetModel import AssetModel
+from models.db_schemes import Asset
+from models.enums.AssetTypeEnum import AssetTypeEnum
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -24,7 +27,7 @@ data_router = APIRouter(
 async def upload_data(request: Request, project_id: str, file: UploadFile, app_settings: Settings = Depends(get_settings)):
 
 
-    project_model = ProjectModel(db_client=request.app.db_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
 
@@ -48,7 +51,20 @@ async def upload_data(request: Request, project_id: str, file: UploadFile, app_s
     except Exception as e:
         logger.error(f"Error saving file: {e}")
         return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"signal": ResponseSignal.FILE_UPLOAD_FAILED.value})
-    return JSONResponse( content={"signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value, "file_id": file_id})
+    
+    asset_model =await AssetModel.create_instance(db_client=request.app.db_client)
+    asset_resource = Asset(
+        asset_project_id=project.id,
+        asset_type=AssetTypeEnum.FILE.value,
+        asset_name=file_id,
+        asset_size=os.path.getsize(file_path),
+       
+    )
+
+    asset_record = await asset_model.create_asset(asset=asset_resource)
+
+    return JSONResponse( content={"signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value, "file_id": str(asset_record.id)})
+
 
 
 @data_router.post("/process/{project_id}")
@@ -59,7 +75,7 @@ async def process_data(request: Request, project_id: str, process_request: Proce
     overlap = process_request.overlap
     do_reset = process_request.do_reset
 
-    project_model = ProjectModel(db_client=request.app.db_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     process_controller = ProcessController(project_id=project_id)
@@ -83,7 +99,7 @@ async def process_data(request: Request, project_id: str, process_request: Proce
             
     ]
 
-    chunk_model = ChunkModel(db_client=request.app.db_client)
+    chunk_model = await ChunkModel.create_instance(db_client=request.app.db_client)
 
     if do_reset==1:
         _ = await chunk_model.delete_chunks_by_project_id(project_id=project.id)

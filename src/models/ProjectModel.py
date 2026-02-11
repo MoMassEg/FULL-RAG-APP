@@ -1,15 +1,32 @@
+from  models.db_schemes import project
 from .BaseDataModel import BaseDataModel
 from .db_schemes import Project
 from .enums.DataBaseEnum import DataBaseEnum
+
+
 class ProjectModel(BaseDataModel):
 
     def __init__(self, db_client: object):
         super().__init__(db_client)
         self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
 
+    @classmethod
+    async def create_instance(cls, db_client: object):
+        instance = cls(db_client)
+        await instance.init_collection()
+        return instance 
+
+    async def init_collection(self):
+        all_collections = await self.db_client.list_collection_names()
+        if DataBaseEnum.COLLECTION_PROJECT_NAME.value not in all_collections:
+            self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
+            indexes = Project.get_indexes()
+            for index in indexes:
+                await self.collection.create_index(index["key"], unique=index["unique"], name=index["name"])
+
     async def create_project(self, project_id: str):
         result = await self.collection.insert_one(Project(project_id=project_id).dict(by_alias=True, exclude_unset=True))
-        project_id = result.inserted_id
+        project.id = result.inserted_id
         return project_id
     
     async def get_project_or_create_one(self, project_id: str):
