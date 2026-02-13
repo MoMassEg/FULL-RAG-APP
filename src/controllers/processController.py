@@ -26,6 +26,9 @@ class ProcessController(BassController):
         file_ext = self.get_file_extension(file_id)
         file_path = os.path.join(self.project_path, file_id)
 
+        if not os.path.exists(file_path):
+            return None
+
         # Check for text files (.txt, .text, etc.)
         if file_ext in self.TEXT_EXTENSIONS:
             return TextLoader(file_path, encoding='utf-8')
@@ -45,7 +48,9 @@ class ProcessController(BassController):
             raise ValueError(
                 f"Unsupported file type: '{file_ext}' for file '{file_id}'. "
                 f"Supported extensions: {supported}"
+                f"File not exist"
             )
+        
 
         return loader.load()
 
